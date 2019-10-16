@@ -1,6 +1,6 @@
 # twitter-sentiment
 
-## To create file named ".env" containing personal api tokens
+#### Create file named ".env" containing personal api tokens
 CONSUMER_KEY = "..."  
 CONSUMER_SECRET = "..."  
 ACCESS_TOKEN = "..."  
