@@ -1,0 +1,22 @@
+name: twitter_sentiment
+channels: 
+  - default
+  - conda-forge
+dependencies:
+  - python=3.6
+  - pip
+  - numpy==1.16.1
+  - matplotlib
+  - pandas
+  - tensorflow-gpu
+  - keras
+  - xlwings
+  - pip:
+    
+    - spacy
+    - jupyter
+    - sklearn
+    - seaborn
+    - bokeh
+    - tweepy
+    - python-dotenv
