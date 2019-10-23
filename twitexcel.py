@@ -3,12 +3,13 @@ import os
 import tweepy
 import pandas as pd
 import seaborn as sns
-sns.set(style="ticks", color_codes=True)
 import numpy as np
 from datetime import timedelta
 from dotenv import load_dotenv
 import win32api
 import win32con
+from NLTKVader import vader_compound_score
+sns.set(style="ticks", color_codes=True)
 
 def construct_query(poster, search_terms, hashtags):
     
@@ -29,6 +30,32 @@ def construct_query(poster, search_terms, hashtags):
         search_query = ' '.join(hashtag_string)
         
     return search_query
+
+def cell_color(sentiment):
+    if -1 <= sentiment < -0.8:
+        color = (165,0,38)
+    elif -0.8 <= sentiment < -0.6:
+        color = (215,48,39)
+    elif -0.6 <= sentiment < -0.4:
+        color = (244,109,67)
+    elif -0.4 <= sentiment < -0.2:
+        color = (253,174,97)
+    elif -0.2 <= sentiment < 0:
+        color = (254,224,139)
+    elif sentiment == 0:
+        color = (255,255,191)
+    elif 0 < sentiment <= 0.2:
+        color = (217,239,139)
+    elif 0.2 < sentiment <= 0.4:
+        color = (166,217,106)
+    elif 0.4 < sentiment <= 0.6:
+        color = (102,189,99)
+    elif 0.6 < sentiment <= 0.8:
+        color = (26,152,80)
+    elif 0.8 < sentiment <= 1:
+        color = (0,104,55)
+    return color
+    
 
 def main():
     wb = xw.Book.caller()
@@ -60,6 +87,10 @@ def main():
     if search_terms == None and poster == None and hashtags == None:
     	win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please key in at least one of the following: Search Term, Hashtag, Poster', 'Exception', win32con.MB_ICONINFORMATION)
     	return
+    
+    if ((poster != None) and (len(poster.split()) > 1)):
+        win32api.MessageBox(xw.apps.active.api.Hwnd, 'Multiple Posters detected. Please key in only one Poster.', 'Exception', win32con.MB_ICONINFORMATION)
+        return
 
     if user_n == None:
     	win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please key in the Maximum # of Tweets to be returned', 'Exception', win32con.MB_ICONINFORMATION)
@@ -72,7 +103,7 @@ def main():
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
     api = tweepy.API(auth)
-    results = tweepy.Cursor(api.search, q=search_query, tweet_mode='extended', lang='en').items(user_n)
+    results = tweepy.Cursor(api.search, q=search_query, tweet_mode='extended', lang='en').items(user_n+1)
 
     # Prompt user if no results are found
     if not(any(True for _ in results)):
@@ -83,6 +114,7 @@ def main():
     
     # Clear Contents
     out_sht.range(out_sht.range('A'+str(ROW)), out_sht.range('F'+str(ROW)).end('down')).clear_contents()
+    out_sht.range(out_sht.range('F'+str(ROW)), out_sht.range('F'+str(ROW)).end('down')).color = None
         
     for tweet in results:
         out_sht.range('A'+str(ROW)).value = tweet.id_str
@@ -91,18 +123,16 @@ def main():
         out_sht.range('D'+str(ROW)).value = tweet.created_at + timedelta(hours=8) # Set to local time
         
         if 'retweeted_status' in tweet._json:
-            out_sht.range('E'+str(ROW)).value = tweet._json['retweeted_status']['full_text']
+            tweet_text = tweet._json['retweeted_status']['full_text']
         else:
-            out_sht.range('E'+str(ROW)).value = tweet.full_text
+            tweet_text = tweet.full_text
+        out_sht.range('E'+str(ROW)).value = tweet_text
+        
+        vader_score = vader_compound_score(tweet_text)
+        out_sht.range('F'+str(ROW)).value = vader_score
+        out_sht.range('F'+str(ROW)).color = cell_color(vader_score)
 
         ROW=ROW+1
-
-
-    #######################################
-    ### Sentiment Scoring #################
-    #######################################
-    
-
 
     #######################################
     ### Charts ############################
@@ -121,13 +151,13 @@ def main():
     #Box plot
     box = sns.catplot(x='week', y='Sentiment Score', hue='Location', kind="box", data=df_week)
     box.fig.set_size_inches(7, 3)
-    rng = out_sht.range("F1")
+    rng = out_sht.range("G1")
     out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
     
     #Violin plot
     box = sns.catplot(x='Location', y='Sentiment Score', kind="violin", data=df)
     box.fig.set_size_inches(7, 3)
-    rng = out_sht.range("F16")
+    rng = out_sht.range("G16")
     out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Violin Plot', update = True)
 
 
