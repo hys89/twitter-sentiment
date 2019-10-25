@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import win32api
 import win32con
 from NLTKVader import vader_compound_score
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 sns.set(style="ticks", color_codes=True)
 
 def construct_query(poster, search_terms, hashtags):
@@ -138,27 +139,40 @@ def main():
     ### Charts ############################
     #######################################
 
+    # create sentiment score grouping by interval
+    def score_groups (df_column, interval = 0.2):
+        lower = df_column.add(0.0001).mul(1/interval).apply(np.floor)*interval
+        upper = df_column.add(0.0001).mul(1/interval).apply(np.ceil)*interval
+        category = lower.round(1).astype(str) + ' to ' + upper.round(1).astype(str)
+        return (category)
+    
     # Dataframe for charts
     df = out_sht.range('A1').expand().options(pd.DataFrame).value
-    # Sentiment score placeholder
-    df['Sentiment Score'] = np.random.randint(0,100,size=(len(df),1))
-    # Sentiment score placeholder
-    index = ['Created At','Sentiment Score','Location']
+    index = ['Created At','VADER Sentiment','Location', 'Full Text']
     df = df[index]
-    df_week = df
-    df_week['week'] = df_week['Created At'].dt.week
+    df['week'] = df['Created At'].dt.week
+    df['score_category'] = score_groups(df['VADER Sentiment'])
+    
+    #Bar plot
+    df_score = df.groupby(['score_category']).size().reset_index().rename(columns={0:'counts'})
+    order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
+    bar = sns.catplot(x="score_category", y="counts", order = order, hue="score_category", kind="bar", palette = "RdBu", data=df_score)
+    bar.set_xticklabels(rotation=30)
+    bar.fig.set_size_inches(7, 3)
+    rng = out_sht.range("G1")
+    out_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot', update = True)
     
     #Box plot
-    box = sns.catplot(x='week', y='Sentiment Score', hue='Location', kind="box", data=df_week)
-    box.fig.set_size_inches(7, 3)
-    rng = out_sht.range("G1")
-    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
-    
-    #Violin plot
-    box = sns.catplot(x='Location', y='Sentiment Score', kind="violin", data=df)
-    box.fig.set_size_inches(7, 3)
-    rng = out_sht.range("G16")
-    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Violin Plot', update = True)
+#    box = sns.catplot(x='week', y='VADER Sentiment', hue='Location', kind="box", data=df)
+#    box.fig.set_size_inches(7, 3)
+#    rng = out_sht.range("G16")
+#    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
+#    
+#    #Violin plot
+#    box = sns.catplot(x='Location', y='VADER Sentiment', kind="violin", data=df)
+#    box.fig.set_size_inches(7, 3)
+#    rng = out_sht.range("G31")
+#    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Violin Plot', update = True)
 
 
     #######################################
