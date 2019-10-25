@@ -8,8 +8,10 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import win32api
 import win32con
+import spacy
 from NLTKVader import vader_compound_score
-from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from wordcloud import WordCloud, STOPWORDS
+import matplotlib.pyplot as plt
 sns.set(style="ticks", color_codes=True)
 
 def construct_query(poster, search_terms, hashtags):
@@ -153,13 +155,23 @@ def main():
     df['week'] = df['Created At'].dt.week
     df['score_category'] = score_groups(df['VADER Sentiment'])
     
+    # wordcloud 
+    text = ' '.join(df['Full Text'].tolist())
+    stopwords = set(STOPWORDS)
+    stopwords.update([r'http\S+'])
+    wordcloud = WordCloud(stopwords=stopwords, background_color="white").generate(text)
+    plt.axis("off")
+    wordcloud_fig = plt.imshow(wordcloud, interpolation='bilinear').get_figure()
+    rng = out_sht.range("G1")
+    out_sht.pictures.add(wordcloud_fig, top=rng.top, left=rng.left, name='Word Cloud', update = True)
+    
     #Bar plot
     df_score = df.groupby(['score_category']).size().reset_index().rename(columns={0:'counts'})
     order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
     bar = sns.catplot(x="score_category", y="counts", order = order, hue="score_category", kind="bar", palette = "RdBu", data=df_score)
     bar.set_xticklabels(rotation=30)
     bar.fig.set_size_inches(7, 3)
-    rng = out_sht.range("G1")
+    rng = out_sht.range("G11")
     out_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot', update = True)
     
     #Box plot
