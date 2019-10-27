@@ -2,6 +2,7 @@ import xlwings as xw
 import os
 import tweepy
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import numpy as np
 from datetime import timedelta
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 import win32api
 import win32con
 import spacy
+from PIL import Image
 import re
 from NLTKVader import vader_compound_score
 from wordcloud import WordCloud, STOPWORDS
@@ -148,44 +150,90 @@ def main(dest):
         category = lower.round(1).astype(str) + ' to ' + upper.round(1).astype(str)
         return (category)
     
+    # create number of followers grouping
+    def follower_groups (df_column):
+        if (df_column <=50):
+            return '0 to 50'
+        elif (df_column <=100):
+            return '51 to 100'
+        elif (df_column <=500):
+            return '101 to 500'
+        elif (df_column <=1000):
+            return '501 to 1000'
+        elif (df_column <=5000):
+            return '1001 to 5000'
+        elif (df_column >5000):
+            return 'More than 5000'
+        return np.nan
+  
     # Dataframe for charts
     df = out_sht.range('A1').expand().options(pd.DataFrame).value
-    index = ['Created At','VADER Sentiment','User Location', 'Full Text']
+    index = ['Created At','VADER Sentiment','Followers','User Location', 'Full Text']
     df = df[index]
-    df['week'] = df['Created At'].dt.week
-    df['score_category'] = score_groups(df['VADER Sentiment'])
+    df['Created At minute'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s')
+    df['sentiment_score_category'] = score_groups(df['VADER Sentiment'])
+    df['tweet_user_followers'] = df['Followers'].apply(follower_groups)
     
     # wordcloud 
     text = ' '.join(df['Full Text'].tolist())
     stopwords = set(STOPWORDS)
-    stopwords.update([r'http\S+'])
-    wordcloud = WordCloud(stopwords=stopwords, background_color="white").generate(text)
+    stopwords.update([r'http[s]?://(?:[a-zA-Z]|[0-9]|[[email protected]&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'])
+    twitter_mask = np.array(Image.open("twitter.png"))
+    twitter_mask[twitter_mask>245]= 255
+    wordcloud = WordCloud(stopwords=stopwords, background_color="white", mask = twitter_mask,
+                          max_words=100, contour_width=5, contour_color='lightblue').generate(text)
     plt.axis("off")
     wordcloud_fig = plt.imshow(wordcloud, interpolation='bilinear').get_figure()
-    rng = viz_sht.range("a1")
+    wordcloud_fig.set_size_inches(2.5, 2)
+    rng = viz_sht.range("A3")
     viz_sht.pictures.add(wordcloud_fig, top=rng.top, left=rng.left, name='Word Cloud', update = True)
     
-    #Bar plot
-    df_score = df.groupby(['score_category']).size().reset_index().rename(columns={0:'counts'})
-    order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
-    bar = sns.catplot(x="score_category", y="counts", order = order, hue="score_category", kind="bar", palette = "RdBu", data=df_score)
-    bar.set_xticklabels(rotation=30)
-    bar.fig.set_size_inches(7, 3)
-    rng = viz_sht.range("A33")
-    viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot', update = True)
+    #Horizontal bar plot by number of followers
+    df_followers = df.groupby(['tweet_user_followers']).size().reset_index().rename(columns={0:'counts'})
+    followers_order=['0 to 50', '51 to 100', '101 to 500', '501 to 1000', '1001 to 5000', 'More than 5000', ]
+    followers_order.reverse()
+    palette = sns.color_palette("Blues")
+    palette.reverse()
+    bar = sns.catplot(x="counts", y="tweet_user_followers", order = followers_order, kind="bar", palette = palette, data=df_followers)
+    bar.set_titles("{Sentimental Score Distribution}")
+    bar.fig.set_size_inches(3.5, 2.7)
+    rng = viz_sht.range("E23")
+    viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot followers', update = True)
+    
+    #Violin plot for sentiment scores by number of followers
+    followers_order=['0 to 50', '51 to 100', '101 to 500', '501 to 1000', '1001 to 5000', 'More than 5000', ]
+    palette = sns.color_palette("Blues")
+    bar = sns.catplot(x="tweet_user_followers", y="VADER Sentiment", order = followers_order, kind="violin", palette = palette, data=df)
+    bar.set_titles("{Sentimental Score Distribution}")
+    bar.set_xticklabels(rotation=70)
+    bar.fig.set_size_inches(3.5, 2.7)
+    rng = viz_sht.range("M23")
+    viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Violin Plot followers', update = True)
+    
+    #Bar plot by sentiment score category
+    df_score = df.groupby(['sentiment_score_category']).size().reset_index().rename(columns={0:'counts'})
+    score_order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
+    palette = sns.color_palette("RdBu",10)
+    bar = sns.catplot(x="sentiment_score_category", y="counts", order = score_order, kind="bar", palette = palette, data=df_score)
+    bar.set_titles("{Sentimental Score Distribution}")
+    bar.set_xticklabels(rotation=70)
+    bar.fig.set_size_inches(3.5, 2.7)
+    rng = viz_sht.range("E5")
+    viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot score', update = True)
+    
+    #Line plot by sentiment score
+    line = sns.catplot(x="Created At", y="VADER Sentiment", kind="point", data=df)
+    line.set_titles("{Sentimental Score Timeline}")
+    line.set(xticks=[],xlabel='')
+    line.fig.set_size_inches(7, 2.7)
+    rng = viz_sht.range("M5")
+    viz_sht.pictures.add(line.fig, top=rng.top, left=rng.left, name='Line Plot score', update = True)
     
     #Box plot
 #    box = sns.catplot(x='week', y='VADER Sentiment', hue='Location', kind="box", data=df)
 #    box.fig.set_size_inches(7, 3)
 #    rng = out_sht.range("G16")
 #    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
-#    
-#    #Violin plot
-#    box = sns.catplot(x='Location', y='VADER Sentiment', kind="violin", data=df)
-#    box.fig.set_size_inches(7, 3)
-#    rng = out_sht.range("G31")
-#    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Violin Plot', update = True)
-
 
     #######################################
     ### Prompt Completion #################
