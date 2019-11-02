@@ -108,7 +108,6 @@ def main(dest):
     results_list = []
     for tweet in results:
         tweet_info = {}
-        tweet_info['ID'] = tweet.id_str
         tweet_info['Created At'] = tweet.created_at + timedelta(hours=8) # Set to local time
         tweet_info['Screen Name'] = tweet.author._json['screen_name']
         tweet_info['User Location'] = tweet.author._json['location']
@@ -116,9 +115,11 @@ def main(dest):
         tweet_info['Following'] = tweet.author._json['friends_count']
         
         if 'retweeted_status' in tweet._json:
+            tweet_info['Is Retweet'] = 'Yes'
             tweet_info['Likes'] = tweet._json['retweeted_status']['favorite_count']
             tweet_text = tweet._json['retweeted_status']['full_text']
         else:
+            tweet_info['Is Retweet'] = 'No'
             tweet_info['Likes'] = tweet._json['favorite_count']
             tweet_text = tweet.full_text
         
@@ -130,14 +131,14 @@ def main(dest):
     out_sht.range('A1').options(index=False).value = results_df
     
     # Column Widths
-    out_sht.range('A1').column_width = 11.25 #ID
-    out_sht.range('B1').column_width = 14.88 #Created At
-    out_sht.range('C1').column_width = 16.25 #Screen Name
-    out_sht.range('D1').column_width = 16.5    #User Location
-    out_sht.range('E1').column_width = 10.25 #Followers
-    out_sht.range('F1').column_width = 10.25 #Following
-    out_sht.range('G1').column_width = 7 #Likes
-    out_sht.range('H1').column_width = 73    #Full Text
+    out_sht.range('A1').column_width = 14.88 #Created At
+    out_sht.range('B1').column_width = 16.25 #Screen Name
+    out_sht.range('C1').column_width = 16.5  #User Location
+    out_sht.range('D1').column_width = 10.25 #Followers
+    out_sht.range('E1').column_width = 10.25 #Following
+    out_sht.range('F1').column_width = 11.2  #Is Retweet
+    out_sht.range('G1').column_width = 7     #Likes
+    out_sht.range('H1').column_width = 65    #Full Text
     out_sht.range('I1').column_width = 17.5  #VADER
     
     # Autofit Rows
@@ -174,7 +175,8 @@ def main(dest):
         return np.nan
   
     # Dataframe for charts
-    df = out_sht.range('A1').expand().options(pd.DataFrame).value
+    #df = out_sht.range('A1').expand().options(pd.DataFrame).value
+    df = results_df.copy()
     index = ['Created At','VADER Sentiment','Followers','User Location', 'Full Text']
     df = df[index]
     df['Created At minute'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s')
