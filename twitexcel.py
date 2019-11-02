@@ -81,6 +81,10 @@ def main(dest):
     	win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please key in the Maximum # of Tweets to be returned.', 'Exception', win32con.MB_ICONINFORMATION)
     	return
     
+    if user_n == 0:
+        win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please ensure that the Maximum # of Tweets is greater than 0.', 'Exception', win32con.MB_ICONINFORMATION)
+        return
+    
     if retweet == None:
         win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please indicate whether retweets should be included.', 'Exception', win32con.MB_ICONINFORMATION)
 
@@ -90,8 +94,8 @@ def main(dest):
     # Scrape
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth)
-    results = tweepy.Cursor(api.search, q=search_query, tweet_mode='extended', lang='en').items(user_n+1)
+    api = tweepy.API(auth, wait_on_rate_limit=True)
+    results = tweepy.Cursor(api.search, q=search_query, tweet_mode='extended', lang='en', count=user_n).items(user_n+1)
         
     # Prompt user if no results are found
     if not(any(True for _ in results)):
@@ -99,7 +103,7 @@ def main(dest):
         return
     
     # Clear Contents
-    out_sht.range(out_sht.range('A2'), out_sht.range('H2').end('down')).clear_contents()
+    out_sht.range(out_sht.range('A2'), out_sht.range('A2').end('down')).api.EntireRow.Delete()
 
     results_list = []
     for tweet in results:
@@ -112,8 +116,10 @@ def main(dest):
         tweet_info['Following'] = tweet.author._json['friends_count']
         
         if 'retweeted_status' in tweet._json:
+            tweet_info['Likes'] = tweet._json['retweeted_status']['favorite_count']
             tweet_text = tweet._json['retweeted_status']['full_text']
         else:
+            tweet_info['Likes'] = tweet._json['favorite_count']
             tweet_text = tweet.full_text
         
         tweet_info['Full Text'] = re.sub(r"http\S+", "", tweet_text) # Clean http links
@@ -127,11 +133,12 @@ def main(dest):
     out_sht.range('A1').column_width = 11.25 #ID
     out_sht.range('B1').column_width = 14.88 #Created At
     out_sht.range('C1').column_width = 16.25 #Screen Name
-    out_sht.range('D1').column_width = 25    #User Location
+    out_sht.range('D1').column_width = 16.5    #User Location
     out_sht.range('E1').column_width = 10.25 #Followers
     out_sht.range('F1').column_width = 10.25 #Following
-    out_sht.range('G1').column_width = 83    #Full Text
-    out_sht.range('H1').column_width = 17.5  #VADER
+    out_sht.range('G1').column_width = 7 #Likes
+    out_sht.range('H1').column_width = 73    #Full Text
+    out_sht.range('I1').column_width = 17.5  #VADER
     
     # Autofit Rows
     out_sht.autofit("rows")
