@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import numpy as np
-from datetime import timedelta
+from datetime import timedelta, datetime
 from dotenv import load_dotenv
 import win32api
 import win32con
@@ -177,11 +177,26 @@ def main(dest):
     # Dataframe for charts
     #df = out_sht.range('A1').expand().options(pd.DataFrame).value
     df = results_df.copy()
-    index = ['Created At','Sentiment Score','Followers','User Location', 'Full Text']
+    index = ['Created At','Sentiment Score','Followers','User Location', 'Is Retweet', 'Likes', 'Full Text']
     df = df[index]
-    df['Created At minute'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s')
+    
+    duration = (df['Created At'].max() - df['Created At'].min()).total_seconds()
+    if (duration <=120):
+        df['Created At grouping'] = df['Created At']
+    elif (duration <=7200):
+        df['Created At grouping'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s')
+    elif (duration <=172800):
+        df['Created At grouping'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s') - pd.to_timedelta(df['Created At'].dt.minute, unit='m') 
+    elif (duration <= 4838400):
+        df['Created At grouping'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s') - pd.to_timedelta(df['Created At'].dt.minute, unit='m') - pd.to_timedelta(df['Created At'].dt.hour, unit='h')
+    else:
+        df['Created At grouping'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s') - pd.to_timedelta(df['Created At'].dt.minute, unit='m') - pd.to_timedelta(df['Created At'].dt.hour, unit='h') - pd.to_timedelta(df['Created At'].dt.day, unit='d')
+        
     df['sentiment_score_category'] = score_groups(df['Sentiment Score'])
     df['tweet_user_followers'] = df['Followers'].apply(follower_groups)
+    
+    #Overall sentiment score
+    viz_sht.range('B3').value = df[df['Sentiment Score']!=0]['Sentiment Score'].mean()
     
     # wordcloud 
     text = ' '.join(df['Full Text'].tolist())
@@ -194,7 +209,7 @@ def main(dest):
     plt.axis("off")
     wordcloud_fig = plt.imshow(wordcloud, interpolation='bilinear').get_figure()
     wordcloud_fig.set_size_inches(2.5, 2)
-    rng = viz_sht.range("A3")
+    rng = viz_sht.range("A5")
     viz_sht.pictures.add(wordcloud_fig, top=rng.top, left=rng.left, name='Word Cloud', update = True)
     
     #Horizontal bar plot by number of followers
@@ -231,19 +246,24 @@ def main(dest):
     viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot score', update = True)
     
     #Line plot by sentiment score
-    line = sns.catplot(x="Created At", y="Sentiment Score", kind="point", data=df)
+    line = sns.catplot(x="Created At grouping", y="Sentiment Score", kind="point", data=df)
     line.set_titles("{Sentimental Score Timeline}")
     line.set(xticks=[],xlabel='')
-    line.fig.set_size_inches(7, 2.7)
+    line.fig.set_size_inches(7.5, 2.7)
     rng = viz_sht.range("M5")
     viz_sht.pictures.add(line.fig, top=rng.top, left=rng.left, name='Line Plot score', update = True)
     
-    #Box plot
-#    box = sns.catplot(x='week', y='Sentiment Score', hue='Location', kind="box", data=df)
-#    box.fig.set_size_inches(7, 3)
-#    rng = out_sht.range("G16")
-#    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
-
+    #Scatter plot by likesd
+    df_retweet = df[df['Is Retweet'] =='Yes']
+    sns.set_style("whitegrid")
+    scatter = sns.relplot(x="Likes", y="Sentiment Score",  data=df_retweet)
+    scatter.set(xticks=np.arange(df_retweet['Likes'].max()/2,df_retweet['Likes'].max(),df_retweet['Likes'].max()/2) 
+    ,yticks=np.arange(0,1,1))
+    scatter.fig.set_size_inches(3.5, 2.7)
+    rng = viz_sht.range("U23")
+    viz_sht.pictures.add(scatter.fig, top=rng.top, left=rng.left, name='Scatter Plot likes', update = True)
+    
+    
     #######################################
     ### Prompt Completion #################
     #######################################
