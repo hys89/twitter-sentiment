@@ -17,7 +17,7 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 sns.set(style="ticks", color_codes=True)
 
-def construct_query(poster, search_terms, hashtags, retweet):
+def construct_query(poster, search_terms, hashtags):
     
     search_query = search_terms
 
@@ -34,9 +34,6 @@ def construct_query(poster, search_terms, hashtags, retweet):
     if hashtags != None and search_query == None:
         hashtag_string = ['#'+h for h in hashtags.split()]
         search_query = ' '.join(hashtag_string)
-    
-    if retweet == "No":
-        search_query = search_query + " -filter:retweets"
         
     return search_query    
 
@@ -66,7 +63,6 @@ def main(dest):
     hashtags = in_sht.range('B11').value
     poster = in_sht.range('B12').value
     user_n = in_sht.range('B13').value
-    retweet = in_sht.range('B14').value
     
     # Check for exceptions
     if search_terms == None and poster == None and hashtags == None:
@@ -85,11 +81,8 @@ def main(dest):
         win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please ensure that the Maximum # of Tweets is greater than 0.', 'Exception', win32con.MB_ICONINFORMATION)
         return
     
-    if retweet == None:
-        win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please indicate whether retweets should be included.', 'Exception', win32con.MB_ICONINFORMATION)
-
     # Construct Query
-    search_query = construct_query(poster, search_terms, hashtags, retweet)
+    search_query = construct_query(poster, search_terms, hashtags)
     
     # Scrape
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
