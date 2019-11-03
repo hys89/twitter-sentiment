@@ -124,7 +124,7 @@ def main(dest):
             tweet_text = tweet.full_text
         
         tweet_info['Full Text'] = re.sub(r"http\S+", "", tweet_text) # Clean http links
-        tweet_info['VADER Sentiment'] = vader_compound_score(tweet_text)
+        tweet_info['Sentiment Score'] = vader_compound_score(tweet_text)
         results_list.append(tweet_info)
     
     results_df = pd.DataFrame(results_list, columns=tweet_info.keys())
@@ -139,7 +139,7 @@ def main(dest):
     out_sht.range('F1').column_width = 11.2  #Is Retweet
     out_sht.range('G1').column_width = 7     #Likes
     out_sht.range('H1').column_width = 65    #Full Text
-    out_sht.range('I1').column_width = 17.5  #VADER
+    out_sht.range('I1').column_width = 17.5  #Sentiment Score
     
     # Autofit Rows
     out_sht.autofit("rows")
@@ -177,10 +177,10 @@ def main(dest):
     # Dataframe for charts
     #df = out_sht.range('A1').expand().options(pd.DataFrame).value
     df = results_df.copy()
-    index = ['Created At','VADER Sentiment','Followers','User Location', 'Full Text']
+    index = ['Created At','Sentiment Score','Followers','User Location', 'Full Text']
     df = df[index]
     df['Created At minute'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s')
-    df['sentiment_score_category'] = score_groups(df['VADER Sentiment'])
+    df['sentiment_score_category'] = score_groups(df['Sentiment Score'])
     df['tweet_user_followers'] = df['Followers'].apply(follower_groups)
     
     # wordcloud 
@@ -212,7 +212,7 @@ def main(dest):
     #Violin plot for sentiment scores by number of followers
     followers_order=['0 to 50', '51 to 100', '101 to 500', '501 to 1000', '1001 to 5000', 'More than 5000', ]
     palette = sns.color_palette("Blues")
-    bar = sns.catplot(x="tweet_user_followers", y="VADER Sentiment", order = followers_order, kind="violin", palette = palette, data=df)
+    bar = sns.catplot(x="tweet_user_followers", y="Sentiment Score", order = followers_order, kind="violin", palette = palette, data=df)
     bar.set_titles("{Sentimental Score Distribution}")
     bar.set_xticklabels(rotation=70)
     bar.fig.set_size_inches(3.5, 2.7)
@@ -231,7 +231,7 @@ def main(dest):
     viz_sht.pictures.add(bar.fig, top=rng.top, left=rng.left, name='Bar Plot score', update = True)
     
     #Line plot by sentiment score
-    line = sns.catplot(x="Created At", y="VADER Sentiment", kind="point", data=df)
+    line = sns.catplot(x="Created At", y="Sentiment Score", kind="point", data=df)
     line.set_titles("{Sentimental Score Timeline}")
     line.set(xticks=[],xlabel='')
     line.fig.set_size_inches(7, 2.7)
@@ -239,7 +239,7 @@ def main(dest):
     viz_sht.pictures.add(line.fig, top=rng.top, left=rng.left, name='Line Plot score', update = True)
     
     #Box plot
-#    box = sns.catplot(x='week', y='VADER Sentiment', hue='Location', kind="box", data=df)
+#    box = sns.catplot(x='week', y='Sentiment Score', hue='Location', kind="box", data=df)
 #    box.fig.set_size_inches(7, 3)
 #    rng = out_sht.range("G16")
 #    out_sht.pictures.add(box.fig, top=rng.top, left=rng.left, name='Box Plot', update = True)
