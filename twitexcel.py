@@ -13,6 +13,7 @@ import spacy
 from PIL import Image
 import re
 from NLTKVader import vader_compound_score
+from W2Vec_LSTM_Sentiment_Engine.w2v_lstm import build_w2v_lstm_and_tokenizer, predict
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 sns.set(style="ticks", color_codes=True)
@@ -118,6 +119,8 @@ def main(dest):
         
         tweet_info['Full Text'] = re.sub(r"http\S+", "", tweet_text) # Clean http links
         tweet_info['Sentiment Score'] = vader_compound_score(tweet_text)
+        tokenizer, model = build_w2v_lstm_and_tokenizer()  
+        tweet_info['Sentiment Score for w2v lstm'] = predict(tweet_text)
         results_list.append(tweet_info)
     
     results_df = pd.DataFrame(results_list, columns=tweet_info.keys())
