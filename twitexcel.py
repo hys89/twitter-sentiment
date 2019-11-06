@@ -83,6 +83,10 @@ def main(dest):
         win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please ensure that the Maximum # of Tweets is greater than 0.', 'Exception', win32con.MB_ICONINFORMATION)
         return
     
+    if engine != 'Word2Vec Embeddings + LSTM Model' and engine != 'Vader':
+        win32api.MessageBox(xw.apps.active.api.Hwnd, 'Please ensure that a valid sentiment engine is selected.', 'Exception', win32con.MB_ICONINFORMATION)
+        return
+    
     # Construct Query
     search_query = construct_query(poster, search_terms, hashtags)
     
