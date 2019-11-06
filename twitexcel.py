@@ -168,10 +168,14 @@ def main(dest):
     #######################################
 
     # create sentiment score grouping by interval
-    def score_groups (df_column, interval = 0.2):
+    def vader_score_groups (df_column, interval = 0.2):
         lower = df_column.add(0.0001).mul(1/interval).apply(np.floor)*interval
         upper = df_column.add(0.0001).mul(1/interval).apply(np.ceil)*interval
         category = lower.round(1).astype(str) + ' to ' + upper.round(1).astype(str)
+        return (category)
+    
+    def w2vlstm_score_groups (df_column):
+        category = pd.cut(df_column, bins=[0,0.4,0.7,1], labels=['0 to 0.4','0.4 to 0.7','0.7 to 1.0'])
         return (category)
     
     # create number of followers grouping
@@ -208,12 +212,32 @@ def main(dest):
     else:
         df['Created At grouping'] = df['Created At'] - pd.to_timedelta(df['Created At'].dt.second, unit='s') - pd.to_timedelta(df['Created At'].dt.minute, unit='m') - pd.to_timedelta(df['Created At'].dt.hour, unit='h') - pd.to_timedelta(df['Created At'].dt.day, unit='d')
         
-    df['sentiment_score_category'] = score_groups(df['Sentiment Score'])
+    if engine == 'Vader':
+        df['sentiment_score_category'] = vader_score_groups(df['Sentiment Score'])
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        df['sentiment_score_category'] = w2vlstm_score_groups(df['Sentiment Score'])
+        
+    
     df['tweet_user_followers'] = df['Followers'].apply(follower_groups)
     
     #Overall sentiment score
-    viz_sht.range('B3').value = df[df['Sentiment Score']!=0]['Sentiment Score'].mean()
-    
+    overall = df[df['Sentiment Score']!=0]['Sentiment Score'].mean()
+    viz_sht.range('B3').value = overall
+    if engine == 'Word2Vec Embeddings + LSTM Model':
+        if overall< -0.33:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
+        elif overall >0.33:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
+        elif -0.33 <= overall <= 0.33:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        if overall< 0.4:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
+        elif overall >0.7:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
+        elif 0.4 <= overall <= 0.7:
+            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
+       
     # wordcloud 
     text = ' '.join(df['Full Text'].tolist())
     stopwords = set(STOPWORDS)
@@ -252,8 +276,12 @@ def main(dest):
     
     #Bar plot by sentiment score category
     df_score = df.groupby(['sentiment_score_category']).size().reset_index().rename(columns={0:'counts'})
-    score_order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
-    palette = sns.color_palette("RdBu",10)
+    if engine == 'Vader':
+        score_order=['-1.0 to -0.8','-0.8 to -0.6','-0.6 to -0.4','-0.4 to -0.2','-0.2 to 0.0','0.0 to 0.2','0.2 to 0.4','0.4 to 0.6','0.6 to 0.8','0.8 to 1.0']
+        palette = sns.color_palette("RdBu",10)
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        score_order=['0 to 0.4','0.4 to 0.7','0.7 to 1.0']
+        palette = sns.color_palette("RdBu",3)
     bar = sns.catplot(x="sentiment_score_category", y="counts", order = score_order, kind="bar", palette = palette, data=df_score)
     bar.set_titles("{Sentimental Score Distribution}")
     bar.set_xticklabels(rotation=70)
@@ -264,17 +292,21 @@ def main(dest):
     #Line plot by sentiment score
     line = sns.catplot(x="Created At grouping", y="Sentiment Score", kind="point", data=df)
     line.set_titles("{Sentimental Score Timeline}")
-    line.set(xticks=[],xlabel='')
+    line.set(xticks=[],xlabel='',ylim=(0, 1))
     line.fig.set_size_inches(7.5, 2.7)
     rng = viz_sht.range("M5")
     viz_sht.pictures.add(line.fig, top=rng.top, left=rng.left, name='Line Plot score', update = True)
     
-    #Scatter plot by likesd
+    #Scatter plot by likes
     df_retweet = df[df['Is Retweet'] =='Yes']
     sns.set_style("whitegrid")
     scatter = sns.relplot(x="Likes", y="Sentiment Score",  data=df_retweet)
     scatter.set(xticks=np.arange(df_retweet['Likes'].max()/2,df_retweet['Likes'].max(),df_retweet['Likes'].max()/2) 
-    ,yticks=np.arange(0,1,1))
+    ,xlim=(0, df_retweet['Likes'].max()))
+    if engine == 'Vader':
+        scatter.set(ylim=(-1, 1),yticks=np.arange(0,1,1))
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        scatter.set(ylim=(0, 1),yticks=np.arange(0,1,0.5))
     scatter.fig.set_size_inches(3.5, 2.7)
     rng = viz_sht.range("U23")
     viz_sht.pictures.add(scatter.fig, top=rng.top, left=rng.left, name='Scatter Plot likes', update = True)
