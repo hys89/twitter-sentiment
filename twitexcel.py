@@ -225,18 +225,18 @@ def main(dest):
     viz_sht.range('B3').value = overall
     if engine == 'Vader':
         if overall< -0.33:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((218, 150, 148))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((218, 150, 148))
         elif overall >0.33:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((196, 215, 155))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((155, 196, 215))
         elif -0.33 <= overall <= 0.33:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((191, 191, 191))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((191, 191, 191))
     elif engine == 'Word2Vec Embeddings + LSTM Model':
         if overall< 0.4:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((218, 150, 148))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((218, 150, 148))
         elif overall >0.7:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((196, 215, 155))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((155, 196, 215))
         elif 0.4 <= overall <= 0.7:
-            viz_sht.range('B3').color = xw.utils.rgb_to_int((191, 191, 191))
+            viz_sht.range('A3:B3').api.Font.color = xw.utils.rgb_to_int((191, 191, 191))
        
     # wordcloud 
     text = ' '.join(df['Full Text'].tolist())
