@@ -47,59 +47,29 @@ import gensim
 # Set log
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-nltk.download('stopwords')
+def build_w2v_lstm_and_tokenizer():
 
-# DATASET
-DATASET_COLUMNS = ["target", "ids", "date", "flag", "user", "text"]
-DATASET_ENCODING = "ISO-8859-1"
-TRAIN_SIZE = 0.8
+    with open('W2Vec_LSTM_Sentiment_Engine/results/tokenizer.pkl', 'rb') as handle:
+        tokenizer = pickle.load(handle)
 
-# TEXT CLENAING
-TEXT_CLEANING_RE = "@\S+|https?:\S+|http?:\S|[^A-Za-z0-9]+"
+    model = load_model('W2Vec_LSTM_Sentiment_Engine/results/model.h5')
 
-# WORD2VEC 
-W2V_SIZE = 300
-W2V_WINDOW = 7
-W2V_EPOCH = 32
-W2V_MIN_COUNT = 10
-
-# KERAS
-SEQUENCE_LENGTH = 300
-EPOCHS = 8
-BATCH_SIZE = 1024
-
-# SENTIMENT
-POSITIVE = "POSITIVE"
-NEGATIVE = "NEGATIVE"
-NEUTRAL = "NEUTRAL"
-SENTIMENT_THRESHOLDS = (0.4, 0.7)
-
-# EXPORT
-KERAS_MODEL = "model.h5"
-WORD2VEC_MODEL = "model.w2v"
-TOKENIZER_MODEL = "tokenizer.pkl"
-ENCODER_MODEL = "encoder.pkl"
-
-with open('W2Vec_LSTM_Sentiment_Engine/results/tokenizer.pkl', 'rb') as handle:
-    tokenizer = pickle.load(handle)
-
-print(tokenizer)
-model = load_model('W2Vec_LSTM_Sentiment_Engine/results/model.h5')
-print(model.summary())
+    return tokenizer, model
 def decode_sentiment(score, include_neutral=True):
+    SENTIMENT_THRESHOLDS = (0.4,0.7)
     if include_neutral:        
-        label = NEUTRAL
+        label = 'NEUTRAL'
         if score <= SENTIMENT_THRESHOLDS[0]:
-            label = NEGATIVE
+            label = 'NEGATIVE'
         elif score >= SENTIMENT_THRESHOLDS[1]:
-            label = POSITIVE
+            label = 'POSITIVE'
 
         return label
     else:
-        return NEGATIVE if score < 0.5 else POSITIVE
+        return 'NEGATIVE' if score < 0.5 else 'POSITIVE'
 
 
-def predict(text, include_neutral=True):
+def predict(text, SEQUENCE_LENGTH = 300, include_neutral=True):
     start_at = time.time()
     # Tokenize text
     x_test = pad_sequences(tokenizer.texts_to_sequences([text]), maxlen=SEQUENCE_LENGTH)
@@ -111,20 +81,24 @@ def predict(text, include_neutral=True):
     return {"label": label, "score": float(score),
        "elapsed_time": time.time()-start_at}  
 
-print('Testing w2v LSTM')
-test_texts = ["Four people injured after reports of stabbings at the Arndale shopping centre in Manchester",
-"Turkish troops enter northern Syria, says President Erdogan, setting up a potential clash with Kurdish-led forces",
-"Always remember Hong Kong and all of its beauty",
-                    """Breaking News & Video! Blizzard Makes Things EVEN WORSE!
-                    Just As The #BoycottBlizzard Noise Was Starting To Calm Down They Retro-Actively BANNED The American Players Who Showed Support For Hong Kong! 
-They Are Trying To Suppress This! Watch & Share Far!""", 
-"Kenyan Eliud Kipchoge becomes the first athlete to run a marathon in under two hours, completing the 26.2 miles in 1:59:40"]
 
-# print(predict("I love the music"))
-# print(predict("I hate the rain"))
-# print(predict("i don't know what i'm doing"))
+if __name__ == "__main__":
+    tokenizer, model = build_w2v_lstm_and_tokenizer()    
 
-for text in test_texts:
-    print(text)
-    print('w2v_lstm predict: ' ,predict(text))
-    print('-'*88)
+    print('Testing w2v LSTM')
+    test_texts = ["Four people injured after reports of stabbings at the Arndale shopping centre in Manchester",
+    "Turkish troops enter northern Syria, says President Erdogan, setting up a potential clash with Kurdish-led forces",
+    "Always remember Hong Kong and all of its beauty",
+                        """Breaking News & Video! Blizzard Makes Things EVEN WORSE!
+                        Just As The #BoycottBlizzard Noise Was Starting To Calm Down They Retro-Actively BANNED The American Players Who Showed Support For Hong Kong! 
+    They Are Trying To Suppress This! Watch & Share Far!""", 
+    "Kenyan Eliud Kipchoge becomes the first athlete to run a marathon in under two hours, completing the 26.2 miles in 1:59:40"]
+
+    # print(predict("I love the music"))
+    # print(predict("I hate the rain"))
+    # print(predict("i don't know what i'm doing"))
+
+    for text in test_texts:
+        print(text)
+        print('w2v_lstm predict: ' ,predict(text))
+        print('-'*88)
