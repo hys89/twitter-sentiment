@@ -1,2 +1,3 @@
 
 .env
+W2Vec_LSTM_Sentiment_Engine/results/*
