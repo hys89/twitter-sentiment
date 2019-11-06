@@ -69,7 +69,7 @@ def decode_sentiment(score, include_neutral=True):
         return 'NEGATIVE' if score < 0.5 else 'POSITIVE'
 
 
-def predict(text, SEQUENCE_LENGTH = 300, include_neutral=True):
+def predict(tokenizer, model, text, SEQUENCE_LENGTH = 300, include_neutral=True):
     start_at = time.time()
     # Tokenize text
     x_test = pad_sequences(tokenizer.texts_to_sequences([text]), maxlen=SEQUENCE_LENGTH)
@@ -79,7 +79,8 @@ def predict(text, SEQUENCE_LENGTH = 300, include_neutral=True):
     label = decode_sentiment(score, include_neutral=include_neutral)
 
     return {"label": label, "score": float(score),
-       "elapsed_time": time.time()-start_at}  
+       "elapsed_time": time.time()-start_at} 
+    
 
 
 if __name__ == "__main__":
@@ -100,5 +101,5 @@ if __name__ == "__main__":
 
     for text in test_texts:
         print(text)
-        print('w2v_lstm predict: ' ,predict(text))
+        print('w2v_lstm predict: ' ,predict(tokenizer, model, text))
         print('-'*88)
