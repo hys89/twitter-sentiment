@@ -64,6 +64,7 @@ def main(dest):
     hashtags = in_sht.range('B11').value
     poster = in_sht.range('B12').value
     user_n = in_sht.range('B13').value
+    engine = in_sht.range('B14').value
     
     # Check for exceptions
     if search_terms == None and poster == None and hashtags == None:
@@ -118,9 +119,23 @@ def main(dest):
             tweet_text = tweet.full_text
         
         tweet_info['Full Text'] = re.sub(r"http\S+", "", tweet_text) # Clean http links
-        tweet_info['Sentiment Score'] = vader_compound_score(tweet_text)
-        tokenizer, model = build_w2v_lstm_and_tokenizer()  
-        tweet_info['Sentiment Score for w2v lstm'] = predict(tweet_text)
+        
+        if engine == 'Vader':
+            tweet_info['Sentiment Score'] = vader_compound_score(tweet_text)
+            if tweet_info['Sentiment Score'] > 0:
+                vader_category = 'POSITIVE'
+            elif tweet_info['Sentiment Score'] < 0:
+                vader_category = 'NEGATIVE'
+            else:
+                vader_category = 'NEUTRAL'
+            tweet_info['Sentiment Category'] = vader_category
+            
+        elif engine == 'Word2Vec Embeddings + LSTM Model':
+            tokenizer, model = build_w2v_lstm_and_tokenizer()  
+            w2v_lstm_pred = predict(tokenizer, model, tweet_text)
+            tweet_info['Sentiment Score'] = w2v_lstm_pred["score"]
+            tweet_info['Sentiment Category'] = w2v_lstm_pred["label"]
+            
         results_list.append(tweet_info)
     
     results_df = pd.DataFrame(results_list, columns=tweet_info.keys())
@@ -134,8 +149,9 @@ def main(dest):
     out_sht.range('E1').column_width = 10.25 #Following
     out_sht.range('F1').column_width = 11.2  #Is Retweet
     out_sht.range('G1').column_width = 7     #Likes
-    out_sht.range('H1').column_width = 65    #Full Text
-    out_sht.range('I1').column_width = 17.5  #Sentiment Score
+    out_sht.range('H1').column_width = 54    #Full Text
+    out_sht.range('I1').column_width = 15.9  #Sentiment Score
+    out_sht.range('J1').column_width = 18.9  #Sentiment Category
     
     # Autofit Rows
     out_sht.autofit("rows")
