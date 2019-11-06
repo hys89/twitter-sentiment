@@ -223,20 +223,21 @@ def main(dest):
     #Overall sentiment score
     overall = df[df['Sentiment Score']!=0]['Sentiment Score'].mean()
     viz_sht.range('B3').value = overall
-    if engine == 'Word2Vec Embeddings + LSTM Model':
+    if engine == 'Vader':
         if overall< -0.33:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
         elif overall >0.33:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
         elif -0.33 <= overall <= 0.33:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
     elif engine == 'Word2Vec Embeddings + LSTM Model':
         if overall< 0.4:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((255, 0, 0))
         elif overall >0.7:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((0, 0, 255))
         elif 0.4 <= overall <= 0.7:
-            viz_sht.Range('B3').xl_range.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
+            viz_sht.range('A3:B3').api.Font.Color = xw.utils.rgb_to_int((0, 0, 0))
+
        
     # wordcloud 
     text = ' '.join(df['Full Text'].tolist())
