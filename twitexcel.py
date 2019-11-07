@@ -13,7 +13,7 @@ import spacy
 from PIL import Image
 import re
 from NLTKVader import vader_compound_score
-from W2Vec_LSTM_Sentiment_Engine.w2v_lstm import build_w2v_lstm_and_tokenizer, predict
+
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 sns.set(style="ticks", color_codes=True)
@@ -123,26 +123,25 @@ def main(dest):
             tweet_text = tweet.full_text
         
         tweet_info['Full Text'] = re.sub(r"http\S+", "", tweet_text) # Clean http links
-        
-        if engine == 'Vader':
-            tweet_info['Sentiment Score'] = vader_compound_score(tweet_text)
-            if tweet_info['Sentiment Score'] > 0:
-                vader_category = 'POSITIVE'
-            elif tweet_info['Sentiment Score'] < 0:
-                vader_category = 'NEGATIVE'
-            else:
-                vader_category = 'NEUTRAL'
-            tweet_info['Sentiment Category'] = vader_category
-            
-        elif engine == 'Word2Vec Embeddings + LSTM Model':
-            tokenizer, model = build_w2v_lstm_and_tokenizer()  
-            w2v_lstm_pred = predict(tokenizer, model, tweet_text)
-            tweet_info['Sentiment Score'] = w2v_lstm_pred["score"]
-            tweet_info['Sentiment Category'] = w2v_lstm_pred["label"]
-            
         results_list.append(tweet_info)
-    
+        
     results_df = pd.DataFrame(results_list, columns=tweet_info.keys())
+    
+    tweet_texts = results_df['Full Text']
+    
+    if engine == 'Vader':
+        vader_scores = [vader_compound_score(t) for t in tweet_texts]
+        results_df['Sentiment Score'] = vader_scores
+        results_df['Sentiment Category'] = np.where(results_df['Sentiment Score']>0, 'POSITIVE', 
+                  np.where(results_df['Sentiment Score']<0, 'NEGATIVE', 'NEUTRAL'))
+
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        from W2Vec_LSTM_Sentiment_Engine.w2v_lstm import build_w2v_lstm_and_tokenizer, predict
+        tokenizer, model = build_w2v_lstm_and_tokenizer()  
+        labels, scores, elapsed = predict(tokenizer, model, tweet_texts)
+        results_df['Sentiment Score'] = scores
+        results_df['Sentiment Category'] = labels
+    
     out_sht.range('A1').options(index=False).value = results_df
     
     # Column Widths

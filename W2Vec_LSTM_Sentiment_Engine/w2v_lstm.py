@@ -69,17 +69,16 @@ def decode_sentiment(score, include_neutral=True):
         return 'NEGATIVE' if score < 0.5 else 'POSITIVE'
 
 
-def predict(tokenizer, model, text, SEQUENCE_LENGTH = 300, include_neutral=True):
+def predict(tokenizer, model, texts, SEQUENCE_LENGTH = 300, include_neutral=True):
     start_at = time.time()
     # Tokenize text
-    x_test = pad_sequences(tokenizer.texts_to_sequences([text]), maxlen=SEQUENCE_LENGTH)
+    x_test = pad_sequences(tokenizer.texts_to_sequences(texts), maxlen=SEQUENCE_LENGTH)
     # Predict
-    score = model.predict([x_test])[0]
+    scores = model.predict(x_test, verbose=1, batch_size=1000)
     # Decode sentiment
-    label = decode_sentiment(score, include_neutral=include_neutral)
+    labels = [decode_sentiment(score, include_neutral=True) for score in scores]
 
-    return {"label": label, "score": float(score),
-       "elapsed_time": time.time()-start_at} 
+    return labels, scores, time.time()-start_at
     
 
 
