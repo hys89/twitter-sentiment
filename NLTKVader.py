@@ -24,25 +24,28 @@ analyser = SentimentIntensityAnalyzer()
 
 def vader_compound_score(sentence):
     score = analyser.polarity_scores(str(sentence))
-    print("{:-<40} {}".format(sentence, str(score)))
+    # print("{:-<40} {}".format(sentence, str(score)))
     return score['compound']
 
-print('Testing.. You should see some example tweets and their scores (from -1 to 1)')
-print('\n')
 
-vader_compound_score("Four people injured after reports of stabbings at the Arndale shopping centre in Manchester")
-print('\n')
+if __name__ == "__main__":
+    
+    print('Testing.. You should see some example tweets and their scores (from -1 to 1)')
+    print('\n')
 
-vader_compound_score("Turkish troops enter northern Syria, says President Erdogan, setting up a potential clash with Kurdish-led forces")
-print('\n')
+    vader_compound_score("Four people injured after reports of stabbings at the Arndale shopping centre in Manchester")
+    print('\n')
 
-vader_compound_score("Always remember Hong Kong and all of its beauty")
-print('\n')
+    vader_compound_score("Turkish troops enter northern Syria, says President Erdogan, setting up a potential clash with Kurdish-led forces")
+    print('\n')
 
-vader_compound_score(
-                    """Breaking News & Video! Blizzard Makes Things EVEN WORSE!  
-Just As The #BoycottBlizzard Noise Was Starting To Calm Down They Retro-Actively BANNED The American Players Who Showed Support For Hong Kong! 
-They Are Trying To Suppress This! Watch & Share Far!""")
-print('\n')
+    vader_compound_score("Always remember Hong Kong and all of its beauty")
+    print('\n')
 
-vader_compound_score("Kenyan Eliud Kipchoge becomes the first athlete to run a marathon in under two hours, completing the 26.2 miles in 1:59:40")
+    vader_compound_score(
+                        """Breaking News & Video! Blizzard Makes Things EVEN WORSE!  
+    Just As The #BoycottBlizzard Noise Was Starting To Calm Down They Retro-Actively BANNED The American Players Who Showed Support For Hong Kong! 
+    They Are Trying To Suppress This! Watch & Share Far!""")
+    print('\n')
+
+    vader_compound_score("Kenyan Eliud Kipchoge becomes the first athlete to run a marathon in under two hours, completing the 26.2 miles in 1:59:40")
