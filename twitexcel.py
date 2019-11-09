@@ -291,7 +291,10 @@ def main(dest):
     #Line plot by sentiment score
     line = sns.catplot(x="Created At grouping", y="Sentiment Score", kind="point", data=df)
     line.set_titles("{Sentimental Score Timeline}")
-    line.set(xticks=[],xlabel='',ylim=(0, 1))
+    if engine == 'Vader':
+        line.set(xticks=[],xlabel='',ylim=(-1, 1))
+    elif engine == 'Word2Vec Embeddings + LSTM Model':
+        line.set(xticks=[],xlabel='',ylim=(0, 1))
     line.fig.set_size_inches(7.5, 2.7)
     rng = viz_sht.range("M5")
     viz_sht.pictures.add(line.fig, top=rng.top, left=rng.left, name='Line Plot score', update = True)
